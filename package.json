@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "csv-parser": "^2.3.1",
     "csv-to-array": "^1.0.2",
     "json2csv": "^3.11.5",
     "node-gitlab": "^1.6.0"

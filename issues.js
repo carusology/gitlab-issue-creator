@@ -1,13 +1,15 @@
+
+
 // Simple Configuration options
 var options = {
   // Create a Personal Access Token in the "User Settings/Access Tokens"
   // menu on Gitlab and set the scope to API.
-  privateToken: 'YourPrivateToken',
+  privateToken: '<I totally did not have to remove this token because I commited it earlier>',
 
   // THe project ID for the issues
   // This can be found at "Project Settings/General"
   // and Expand the "General Project Settings" section
-  projectId: 12345678,
+  projectId: 3414,
 
   // The API throws a 500 error when the calls come too fast.
   // This is a quick and dirty way to delay them by a .5 seconds for each post request.
@@ -28,10 +30,11 @@ var options = {
 
 var gitlab = require('node-gitlab');
 var json2csv = require('json2csv');
+const csv = require("csv-parser");
 var fs = require('fs');
 
 var client = gitlab.create({
-  api: 'https://gitlab.com/api/v4',
+  api: 'https://git.lab.smartsheet.com/api/v4',
   privateToken: options.privateToken
 });
 
@@ -59,8 +62,14 @@ switch (options.args[2]) {
     // Create a bunch of issues by passing a CSV
   case "-c":
     var columns = ["title", "description", "assignee", "milestone", "labels"];
+    let results = [];
+    fs.createReadStream(options.args[3])
+	.pipe(csv(['title', 'description']))
+	.on('data', (data) => results.push(data))
+	.on('end', () => { console.log(results); getMilestones(results); });
+    /*
     require("csv-to-array")({
-      file: options.args[3],
+	file: options.args[3],
       columns: columns
     }, function(err, array) {
       if (err) {
@@ -69,7 +78,8 @@ switch (options.args[2]) {
         array.shift(); // drop the headers
         getMilestones(array);
       }
-    });
+    });    
+*/
     break;
 
   case "-r":
@@ -112,14 +122,16 @@ function clearRetryFile() {
 }
 
 function createIssue(data) {
-  client.issues.create({
+  let issue = {
     id: options.projectId,
     title: data.title,
-    description: data.description.replace(/0x0A/g, "\r\n"),
+    description: (data.description || "").replace(/0x0A/g, "\r\n"),
     assignee_id: data.assignee,
     milestone_id: data.milestoneId,
     labels: data.labels
-  }, function(err, success) {
+  };
+
+  client.issues.create(issue, function(err, success) {
     if (success) {
       console.log("Issue " + data.title + " created!");
     } else {
@@ -131,6 +143,7 @@ function createIssue(data) {
       updateRetryFile(data.title);
     }
   });
+
 }
 
 function createIssues(data) {
@@ -170,6 +183,9 @@ function getMilestones(data) {
 }
 
 function removeChars(str) {
+    if (!str) {
+	return str;
+    }
   // Replace special characters and spaces with underscores
   var newString = str.replace(/[^A-Z0-9]+/ig, "_");
   // Return the name in all lower case
